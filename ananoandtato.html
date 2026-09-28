@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ქორწილის მოწვევა - ანანო & ტატო</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            font-family: 'BPG Arial', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 430px;
+            height: 100vh;
+            margin: 0 auto;
+            position: relative;
+            background-color: #000;
+            overflow: hidden;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .screen.active {
+            display: flex;
+            opacity: 1;
+            z-index: 5;
+        }
+
+        img, video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* პირველი ფოტოს ღილაკი */
+        .click-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 50px;
+        }
+
+        .open-text {
+            background: rgba(255, 255, 255, 0.85);
+            padding: 12px 25px;
+            border-radius: 30px;
+            color: #1b4d3e;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            animation: bounce 2s infinite;
+        }
+
+        /* მეორე ვიდეოს სტილი - კრემისფერი მსუბუქი დაბურვით და ტექსტის რბილი შემოყვანით */
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 40px 20px;
+            pointer-events: none;
+            background: rgba(245, 239, 230, 0.25);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 2s ease, transform 2s ease;
+        }
+
+        .video-overlay.show-text {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .invitation-top-content {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .invitation-top-content h2 {
+            font-size: 18px;
+            font-weight: 400;
+            color: #fff;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        }
+
+        .invitation-top-content h1 {
+            font-size: 34px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        }
+
+        .invitation-top-content p {
+            font-size: 19px;
+            color: #fff;
+            font-weight: 500;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        }
+
+        /* ჩამოსქროლეთ ნიშანი ბოქსის გარეშე */
+        .scroll-down-indicator {
+            font-size: 14px;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+            animation: bounce 2s infinite;
+            margin-bottom: 20px;
+        }
+
+        /* დახვეწილი მუსიკის ღილაკი მეორე ვიდეოს თავზე */
+        .music-toggle-btn {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            z-index: 20;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .music-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.05);
+        }
+
+        .music-toggle-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: #fff;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+        }
+
+        /* სქროლვადი გვერდი */
+        .scrollable-page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            z-index: 10;
+            scroll-snap-type: y mandatory;
+        }
+
+        .scrollable-page.active {
+            display: flex;
+        }
+
+        .section {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            scroll-snap-align: start;
+            flex-shrink: 0;
+        }
+
+        /* ფოტო 5 სექცია დროის ათვლით */
+        .section-five-content {
+            background-color: #fcfbfa;
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .section-five-content img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* დროის ათვლა ბოქსის გარეშე, მუქი მწვანე ფერით */
+        .countdown-container {
+            position: absolute;
+            bottom: 60px;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            background: transparent;
+            padding: 10px;
+        }
+
+        .countdown-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .countdown-item span {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1b4d3e;
+        }
+
+        .countdown-item label {
+            font-size: 13px;
+            color: #1b4d3e;
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+            40% {transform: translateY(-8px);}
+            60% {transform: translateY(-4px);}
+        }
+    </style>
+</head>
+<body>
+
+    <!-- აუდიო ფაილი -->
+    <audio id="bgMusic" src="music.mp3" loop></audio>
+
+    <div class="container">
+        <!-- ეტაპი 1: ფოტო 1 -->
+        <div id="screen1" class="screen active">
+            <img src="1.jpg" alt="მოწვევის გარეკანი">
+            <div class="click-area" onclick="startExperience()">
+                <div class="open-text">გახსენით მოწვევა</div>
+            </div>
+        </div>
+
+        <!-- ეტაპი 2: ვიდეო 1 (1.mp4) -->
+        <div id="screen2" class="screen">
+            <video id="video1" src="1.mp4" muted playsinline></video>
+        </div>
+
+        <!-- ეტაპი 3 & 4: სქროლვადი არეალი -->
+        <div id="scrollPage" class="scrollable-page">
+            <!-- ვიდეო 2 სექცია სათაურებით და მუსიკის ღილაკით -->
+            <div class="section">
+                <video id="video2" src="2.mp4" autoplay loop muted playsinline></video>
+                
+                <!-- მუსიკის ჩართვა/გამორთვის დახვეწილი ღილაკი -->
+                <div class="music-toggle-btn" id="musicBtn" onclick="toggleMusic()">
+                    <svg id="musicIcon" viewBox="0 0 24 24">
+                        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                    </svg>
+                </div>
+
+                <div class="video-overlay" id="videoOverlay">
+                    <div class="invitation-top-content">
+                        <h2>გეპატიჟებით ჩვენს ქორწილში</h2>
+                        <h1>ანანო და ტატო</h1>
+                        <p>24 ოქტომბერი 2026 წელი</p>
+                    </div>
+                    <div class="scroll-down-indicator">ჩამოსქროლეთ ↓</div>
+                </div>
+            </div>
+
+            <!-- ფოტო 5 სექცია ათვლით -->
+            <div class="section">
+                <div class="section-five-content">
+                    <img src="5.jpg" alt="ფოტო 5">
+                    <div class="countdown-container" id="countdown">
+                        <div class="countdown-item"><span id="days">00</span><label>დღე</label></div>
+                        <div class="countdown-item"><span id="hours">00</span><label>საათი</label></div>
+                        <div class="countdown-item"><span id="minutes">00</span><label>წუთი</label></div>
+                        <div class="countdown-item"><span id="seconds">00</span><label>წამი</label></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const screen1 = document.getElementById('screen1');
+        const screen2 = document.getElementById('screen2');
+        const scrollPage = document.getElementById('scrollPage');
+        const video1 = document.getElementById('video1');
+        const video2 = document.getElementById('video2');
+        const videoOverlay = document.getElementById('videoOverlay');
+        const bgMusic = document.getElementById('bgMusic');
+        const musicIcon = document.getElementById('musicIcon');
+
+        let isPlaying = false;
+
+        // პირველი ფოტოდან ვიდეო 1-ზე გადასვლა და მუსიკის ჩართვა
+        function startExperience() {
+            // მუსიკის დაკვრა
+            bgMusic.play().then(() => {
+                isPlaying = true;
+                updateMusicIcon();
+            }).catch(err => console.log("Audio play blocked:", err));
+
+            screen1.classList.remove('active');
+            screen2.classList.add('active');
+            video1.currentTime = 0;
+            video1.play().catch(err => console.log(err));
+        }
+
+        // მუსიკის მართვის ფუნქცია
+        function toggleMusic() {
+            if (isPlaying) {
+                bgMusic.pause();
+                isPlaying = false;
+            } else {
+                bgMusic.play().catch(err => console.log(err));
+                isPlaying = true;
+            }
+            updateMusicIcon();
+        }
+
+        // ღილაკის აიქონის განახლება (ჩართული/გამორჩეული)
+        function updateMusicIcon() {
+            if (isPlaying) {
+                // ნოტა / ჩართულია
+                musicIcon.innerHTML = '<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>';
+            } else {
+                // გადახაზული ნოტა / გამორთულია
+                musicIcon.innerHTML = '<path d="M4.27 3L3 4.27 9.73 11H9v6c0 1.1.9 2 2 2s2-.9 2-2v-1.73l5.73 5.73L20 19.73 4.27 3zM12 7h4V3h-6v2.18L12 7z"/>';
+            }
+        }
+
+        // ვიდეო 1-დან მეორე ვიდეოზე ეგრევე გადასვლა შავი ფონის გარეშე
+        video1.addEventListener('ended', function() {
+            screen2.classList.remove('active');
+            scrollPage.classList.add('active');
+            video2.currentTime = 0;
+            video2.play().catch(err => console.log(err));
+            
+            setTimeout(() => {
+                videoOverlay.classList.add('show-text');
+            }, 200);
+        });
+
+        // 24 ოქტომბერი 2026 წლის დროის ათვლა
+        const targetDate = new Date('October 24, 2026 00:00:00').getTime();
+
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const difference = targetDate - now;
+
+            if (difference > 0) {
+                const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+                document.getElementById('days').innerText = String(days).padStart(2, '0');
+                document.getElementById('hours').innerText = String(hours).padStart(2, '0');
+                document.getElementById('minutes').innerText = String(minutes).padStart(2, '0');
+                document.getElementById('seconds').innerText = String(seconds).padStart(2, '0');
+            }
+        }
+
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+    </script>
+</body>
+</html>
